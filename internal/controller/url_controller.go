@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/OtavMacedo/url-shortener-golang/internal/apperr"
 	"github.com/OtavMacedo/url-shortener-golang/internal/model"
 	"github.com/OtavMacedo/url-shortener-golang/internal/repository"
 	"github.com/OtavMacedo/url-shortener-golang/internal/service"
@@ -34,7 +35,7 @@ func (uc *UrlController) Create(c *gin.Context) {
 	url := model.UrlModel{
 		OriginalUrl: request.OriginalUrl,
 		Slug:        request.Slug,
-		UserID:      "019d5557-5e7f-7363-ac5a-52f4696a2afe",
+		UserID:      "019d5f80-84cb-7728-9036-c014b3af2617",
 	}
 
 	if err := uc.service.Create(c.Request.Context(), url); err != nil {
@@ -54,4 +55,22 @@ func (uc *UrlController) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "slug created successfully",
 	})
+}
+
+func (uc *UrlController) Redirect(c *gin.Context) {
+	slug := c.Param("slug")
+	originalUrl, err := uc.service.GetOriginalUrl(c, slug)
+	if err != nil {
+		if errors.Is(err, apperr.ErrSlugNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "url not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "internal server error",
+		})
+		return
+	}
+	c.Redirect(http.StatusFound, originalUrl)
 }

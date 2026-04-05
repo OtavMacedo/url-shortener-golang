@@ -58,6 +58,7 @@ func main() {
 	router.POST("/users", userController.Create)
 	router.POST("/login", userController.Login)
 	router.POST("/urls", urlController.Create)
+	router.GET("/:slug", urlController.Redirect)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start api: %v", err)

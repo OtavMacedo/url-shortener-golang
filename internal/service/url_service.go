@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/OtavMacedo/url-shortener-golang/internal/apperr"
 	"github.com/OtavMacedo/url-shortener-golang/internal/model"
 	"github.com/OtavMacedo/url-shortener-golang/internal/repository"
 	"github.com/OtavMacedo/url-shortener-golang/utils"
@@ -46,6 +47,17 @@ func (us *UrlService) Create(ctx context.Context, url model.UrlModel) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 	return nil
+}
+
+func (us *UrlService) GetOriginalUrl(ctx context.Context, slug string) (string, error) {
+	existingSlug, err := us.repository.FindBySlug(ctx, slug)
+	if err != nil {
+		return "", err
+	}
+	if existingSlug == nil {
+		return "", apperr.ErrSlugNotFound
+	}
+	return existingSlug.OriginalUrl, nil
 }
 
 func generateSlug(length int) (string, error) {
