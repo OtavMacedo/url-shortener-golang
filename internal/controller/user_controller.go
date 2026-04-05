@@ -4,7 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/OtavMacedo/url-shortener-golang/internal/model"
+	"github.com/OtavMacedo/url-shortener-golang/internal/apperr"
+	"github.com/OtavMacedo/url-shortener-golang/internal/dto"
 	"github.com/OtavMacedo/url-shortener-golang/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -13,17 +14,12 @@ type UserController struct {
 	service *service.UserService
 }
 
-type createUserRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-}
-
 func NewUserController(service *service.UserService) *UserController {
 	return &UserController{service: service}
 }
 
 func (uc *UserController) Create(c *gin.Context) {
-	var request createUserRequest
+	var request dto.CreateUserInput
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
@@ -31,13 +27,8 @@ func (uc *UserController) Create(c *gin.Context) {
 		return
 	}
 
-	user := model.UserModel{
-		Email:        request.Email,
-		PasswordHash: request.Password,
-	}
-
-	if err := uc.service.Create(c.Request.Context(), user); err != nil {
-		if errors.Is(err, service.ErrUserAlreadyExists) {
+	if err := uc.service.Create(c.Request.Context(), request); err != nil {
+		if errors.Is(err, apperr.ErrUserAlreadyExists) {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": "user already exists",
 			})
@@ -52,5 +43,37 @@ func (uc *UserController) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "user created successfully",
+	})
+}
+
+func (uc *UserController) Login(c *gin.Context) {
+	var request dto.LoginInput
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid request body",
+		})
+		return
+	}
+	token, err := uc.service.Login(c, request)
+	if err != nil {
+		if errors.Is(err, apperr.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		if errors.Is(err, apperr.ErrInvalidPassword) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "internal server error",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
 	})
 }

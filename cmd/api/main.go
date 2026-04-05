@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/OtavMacedo/url-shortener-golang/internal/controller"
 	"github.com/OtavMacedo/url-shortener-golang/internal/infra"
@@ -24,14 +26,29 @@ func main() {
 		port = "8080"
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is required")
+	}
+	jwtExpirationHours := os.Getenv("JWT_EXPIRATION_HOURS")
+	if jwtSecret == "" {
+		log.Fatal("JWT_EXPIRATION_HOURS environment variable is required")
+	}
+	jwtExpirationHoursInt, err := strconv.Atoi(jwtExpirationHours)
+	if err != nil {
+		log.Fatal("Invalid JWT_SECRET environment variable")
+	}
+	jwtExpiration := time.Duration(jwtExpirationHoursInt) * time.Hour
+
 	pool, err := infra.Connect(databaseURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
+	authService := service.NewAuthService(jwtSecret, jwtExpiration)
 	userRepository := repository.NewUserRepository(pool)
-	userService := service.NewUserService(userRepository)
+	userService := service.NewUserService(userRepository, authService)
 	userController := controller.NewUserController(userService)
 	urlRepository := repository.NewUrlRepository(pool)
 	urlService := service.NewUrlService(urlRepository)
@@ -39,6 +56,7 @@ func main() {
 
 	router := gin.Default()
 	router.POST("/users", userController.Create)
+	router.POST("/login", userController.Login)
 	router.POST("/urls", urlController.Create)
 
 	if err := router.Run(":" + port); err != nil {

@@ -41,7 +41,7 @@ func (us *UrlService) Create(ctx context.Context, url model.UrlModel) error {
 	}
 	if err := us.repository.Create(ctx, url); err != nil {
 		if errors.Is(err, repository.ErrUrlSlugConflict) {
-			return ErrUserAlreadyExists
+			return repository.ErrUrlSlugConflict
 		}
 		return fmt.Errorf("failed to create user: %w", err)
 	}
