@@ -12,16 +12,11 @@ import (
 
 var ErrUserAlreadyExists = errors.New("user already exists")
 
-type userRepository interface {
-	Create(ctx context.Context, user model.UserModel) error
-	FindByEmail(ctx context.Context, email string) (*model.UserModel, error)
-}
-
 type UserService struct {
-	repository userRepository
+	repository *repository.UserRepository
 }
 
-func NewUserService(repository userRepository) *UserService {
+func NewUserService(repository *repository.UserRepository) *UserService {
 	return &UserService{repository: repository}
 }
 
