@@ -49,7 +49,7 @@ func (us *UrlService) Create(ctx context.Context, url model.UrlModel) error {
 	return nil
 }
 
-func (us *UrlService) GetOriginalUrl(ctx context.Context, slug string) (string, error) {
+func (us *UrlService) FindBySlug(ctx context.Context, slug string) (string, error) {
 	existingSlug, err := us.repository.FindBySlug(ctx, slug)
 	if err != nil {
 		return "", err

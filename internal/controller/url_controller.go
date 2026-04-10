@@ -61,7 +61,7 @@ func (uc *UrlController) Create(c *gin.Context) {
 
 func (uc *UrlController) Redirect(c *gin.Context) {
 	slug := c.Param("slug")
-	originalUrl, err := uc.service.GetOriginalUrl(c, slug)
+	originalUrl, err := uc.service.FindBySlug(c, slug)
 	if err != nil {
 		if errors.Is(err, apperr.ErrSlugNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
