@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/OtavMacedo/url-shortener-golang/internal/cache"
 	"github.com/OtavMacedo/url-shortener-golang/internal/controller"
 	"github.com/OtavMacedo/url-shortener-golang/internal/infra"
 	"github.com/OtavMacedo/url-shortener-golang/internal/middleware"
@@ -20,6 +21,10 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL environment variable is required")
+	}
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		log.Fatal("REDIS_URL environment variable is required")
 	}
 
 	port := os.Getenv("PORT")
@@ -46,13 +51,18 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
+	redisClient, err := infra.ConnectRedis(redisURL)
+	if err != nil {
+		log.Fatalf("failed to connect to redis: %v", err)
+	}
 
 	authService := service.NewAuthService(jwtSecret, jwtExpiration)
 	userRepository := repository.NewUserRepository(pool)
 	userService := service.NewUserService(userRepository, authService)
 	userController := controller.NewUserController(userService)
 	urlRepository := repository.NewUrlRepository(pool)
-	urlService := service.NewUrlService(urlRepository)
+	redisCache := cache.NewRedisCache(redisClient)
+	urlService := service.NewUrlService(urlRepository, redisCache)
 	urlController := controller.NewUrlService(urlService)
 
 	router := gin.Default()
@@ -63,7 +73,7 @@ func main() {
 	protected := router.Group("/")
 	protected.Use(middleware.AuthMiddleware(authService))
 
-	protected.POST("/urls", urlController.Create)
+	protected.POST("/urls", middleware.RateLimit(redisCache), urlController.Create)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start api: %v", err)
