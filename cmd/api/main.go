@@ -41,7 +41,7 @@ func main() {
 	}
 	jwtExpiration := time.Duration(jwtExpirationHoursInt) * time.Hour
 
-	pool, err := infra.Connect(databaseURL)
+	pool, err := infra.ConnectDB(databaseURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
