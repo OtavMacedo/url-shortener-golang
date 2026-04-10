@@ -8,6 +8,7 @@ import (
 
 	"github.com/OtavMacedo/url-shortener-golang/internal/controller"
 	"github.com/OtavMacedo/url-shortener-golang/internal/infra"
+	"github.com/OtavMacedo/url-shortener-golang/internal/middleware"
 	"github.com/OtavMacedo/url-shortener-golang/internal/repository"
 	"github.com/OtavMacedo/url-shortener-golang/internal/service"
 	"github.com/gin-gonic/gin"
@@ -31,7 +32,7 @@ func main() {
 		log.Fatal("JWT_SECRET environment variable is required")
 	}
 	jwtExpirationHours := os.Getenv("JWT_EXPIRATION_HOURS")
-	if jwtSecret == "" {
+	if jwtExpirationHours == "" {
 		log.Fatal("JWT_EXPIRATION_HOURS environment variable is required")
 	}
 	jwtExpirationHoursInt, err := strconv.Atoi(jwtExpirationHours)
@@ -57,8 +58,12 @@ func main() {
 	router := gin.Default()
 	router.POST("/users", userController.Create)
 	router.POST("/login", userController.Login)
-	router.POST("/urls", urlController.Create)
 	router.GET("/:slug", urlController.Redirect)
+
+	protected := router.Group("/")
+	protected.Use(middleware.AuthMiddleware(authService))
+
+	protected.POST("/urls", urlController.Create)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start api: %v", err)

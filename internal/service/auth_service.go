@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var (
@@ -37,4 +38,24 @@ func (as *AuthService) GenerateToken(userID string) (string, error) {
 		return "", fmt.Errorf("failed to generate jwt: %w", err)
 	}
 	return signedToken, nil
+}
+
+func (as *AuthService) ValidateToken(tokenStr string) (uuid.UUID, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return as.secretKey, nil
+	})
+	if err != nil || !token.Valid {
+		return uuid.Nil, fmt.Errorf("invalid token")
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	id, err := uuid.Parse(claims["sub"].(string))
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid subject")
+	}
+
+	return id, nil
 }

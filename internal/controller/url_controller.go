@@ -9,6 +9,7 @@ import (
 	"github.com/OtavMacedo/url-shortener-golang/internal/repository"
 	"github.com/OtavMacedo/url-shortener-golang/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UrlController struct {
@@ -32,10 +33,11 @@ func (uc *UrlController) Create(c *gin.Context) {
 		})
 		return
 	}
+	userID := c.MustGet("userID").(uuid.UUID)
 	url := model.UrlModel{
 		OriginalUrl: request.OriginalUrl,
 		Slug:        request.Slug,
-		UserID:      "019d5f80-84cb-7728-9036-c014b3af2617",
+		UserID:      userID.String(),
 	}
 
 	if err := uc.service.Create(c.Request.Context(), url); err != nil {
