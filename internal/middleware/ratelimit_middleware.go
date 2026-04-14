@@ -3,28 +3,25 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/OtavMacedo/url-shortener-golang/internal/cache"
+	"github.com/OtavMacedo/url-shortener-golang/internal/ratelimiter"
 	"github.com/gin-gonic/gin"
 )
 
-func RateLimit(cache *cache.RedisCache) gin.HandlerFunc {
+func RateLimiterMiddleware(rl *ratelimiter.RateLimiter) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ip := ctx.ClientIP()
-
-		limited, err := cache.IsRateLimited(ctx, ip)
+		allowed, err := rl.Allow(ctx.Request.Context(), ip)
 		if err != nil {
-			ctx.Next()
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
-
-		if limited {
+		if !allowed {
 			ctx.Header("Retry-After", "60")
 			ctx.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "too many requests, try again in 60 seconds",
+				"error": "too many requests, try again later",
 			})
 			return
 		}
-
 		ctx.Next()
 	}
 }

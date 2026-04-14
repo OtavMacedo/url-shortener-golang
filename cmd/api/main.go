@@ -10,6 +10,7 @@ import (
 	"github.com/OtavMacedo/url-shortener-golang/internal/controller"
 	"github.com/OtavMacedo/url-shortener-golang/internal/infra"
 	"github.com/OtavMacedo/url-shortener-golang/internal/middleware"
+	"github.com/OtavMacedo/url-shortener-golang/internal/ratelimiter"
 	"github.com/OtavMacedo/url-shortener-golang/internal/repository"
 	"github.com/OtavMacedo/url-shortener-golang/internal/service"
 	"github.com/gin-gonic/gin"
@@ -63,7 +64,8 @@ func main() {
 	urlRepository := repository.NewUrlRepository(pool)
 	redisCache := cache.NewRedisCache(redisClient)
 	urlService := service.NewUrlService(urlRepository, redisCache)
-	urlController := controller.NewUrlService(urlService)
+	urlController := controller.NewUrlController(urlService)
+	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 5, 1*time.Minute)
 
 	router := gin.Default()
 	router.POST("/users", userController.Create)
@@ -73,7 +75,7 @@ func main() {
 	protected := router.Group("/")
 	protected.Use(middleware.AuthMiddleware(authService))
 
-	protected.POST("/urls", middleware.RateLimit(redisCache), urlController.Create)
+	protected.POST("/urls", middleware.RateLimiterMiddleware(rateLimiter), urlController.Create)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start api: %v", err)

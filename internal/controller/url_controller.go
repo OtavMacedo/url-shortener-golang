@@ -16,7 +16,7 @@ type UrlController struct {
 	service *service.UrlService
 }
 
-func NewUrlService(service *service.UrlService) *UrlController {
+func NewUrlController(service *service.UrlService) *UrlController {
 	return &UrlController{service: service}
 }
 
